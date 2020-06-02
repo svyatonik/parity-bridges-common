@@ -353,7 +353,7 @@ pub fn run<P: HeadersSyncPipeline>(
 
 			// print progress
 			progress_context = print_sync_progress(progress_context, &sync);
-
+log::debug!(target: "bridge", "source: {} target: {}", source_maybe_client.is_some(), target_maybe_client.is_some());
 			// if target client is available: wait, or call required target methods
 			if let Some(target_client) = target_maybe_client.take() {
 				// the priority is to:
@@ -489,6 +489,8 @@ pub fn run<P: HeadersSyncPipeline>(
 					source_maybe_client = Some(source_client);
 				}
 			}
+
+			log::debug!(target: "bridge", "going to sleep");
 		}
 	});
 }

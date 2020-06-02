@@ -267,7 +267,7 @@ impl pallet_sudo::Trait for Runtime {
 }
 
 parameter_types! {
-	pub const Period: BlockNumber = 4;
+	pub const Period: BlockNumber = 1000;
 	pub const Offset: BlockNumber = 0;
 }
 

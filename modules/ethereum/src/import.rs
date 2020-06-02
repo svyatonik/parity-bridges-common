@@ -94,6 +94,11 @@ pub fn import_header<S: Storage>(
 	header: Header,
 	receipts: Option<Vec<Receipt>>,
 ) -> Result<(HeaderId, Vec<(HeaderId, Option<S::Submitter>)>), Error> {
+let begin = std::time::Instant::now();
+sp_std::if_std! {
+	use codec::Encode;
+	//println!("===: {}", hex::encode(&header.encode()));
+}
 	// first check that we are able to import this header at all
 	let (header_id, finalized_id) = is_importable_header(storage, &header)?;
 
@@ -148,7 +153,8 @@ pub fn import_header<S: Storage>(
 			false => None,
 		},
 	);
-
+let elapsed = begin.elapsed();
+println!("=== {}: {}", header_number, elapsed.as_millis());
 	Ok((header_id, finalized_blocks.finalized_headers))
 }
 

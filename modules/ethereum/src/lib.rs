@@ -39,6 +39,8 @@ mod verification;
 
 #[cfg(test)]
 mod mock;
+#[cfg(test)]
+mod bench;
 
 /// Authority round engine configuration parameters.
 #[derive(Clone, Encode, Decode, PartialEq, RuntimeDebug)]
