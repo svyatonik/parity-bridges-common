@@ -22,7 +22,7 @@
 //! 2) add `declare_bridge_options!(...)` for the bridge;
 //! 3) add bridge support to the `select_bridge! { ... }` macro.
 
-use crate::cli::{CliChain, HexLaneId, PrometheusParams};
+use crate::cli::{CliChain, HexLaneId, PrometheusParams, relay_messages::RelayerMode};
 use crate::declare_chain_options;
 use crate::messages_lane::MessagesRelayParams;
 use crate::on_demand_headers::OnDemandHeadersRelay;
@@ -43,6 +43,9 @@ pub struct HeadersAndMessagesSharedParams {
 	/// Hex-encoded lane identifiers that should be served by the complex relay.
 	#[structopt(long, default_value = "00000000")]
 	lane: Vec<HexLaneId>,
+	/// Relayer operating mode.
+	#[structopt(possible_values = &RelayerMode::variants(), case_insensitive = true, default_value="NoLosses")]
+	relayer_mode: RelayerMode,
 	#[structopt(flatten)]
 	prometheus_params: PrometheusParams,
 }
@@ -126,6 +129,7 @@ impl RelayHeadersAndMessages {
 			let right_sign = params.right_sign.to_keypair::<Right>()?;
 
 			let lanes = params.shared.lane;
+			let relayer_mode = params.shared.relayer_mode.into();
 
 			let metrics_params: MetricsParams = params.shared.prometheus_params.into();
 			let metrics_params = relay_utils::relay_metrics(None, metrics_params).into_params();
@@ -155,6 +159,7 @@ impl RelayHeadersAndMessages {
 					source_to_target_headers_relay: Some(left_to_right_on_demand_headers.clone()),
 					target_to_source_headers_relay: Some(right_to_left_on_demand_headers.clone()),
 					lane_id: lane,
+					relayer_mode,
 					metrics_params: metrics_params.clone().disable().metrics_prefix(
 						messages_relay::message_lane_loop::metrics_prefix::<LeftToRightMessages>(&lane),
 					),
@@ -169,6 +174,7 @@ impl RelayHeadersAndMessages {
 					source_to_target_headers_relay: Some(right_to_left_on_demand_headers.clone()),
 					target_to_source_headers_relay: Some(left_to_right_on_demand_headers.clone()),
 					lane_id: lane,
+					relayer_mode,
 					metrics_params: metrics_params.clone().disable().metrics_prefix(
 						messages_relay::message_lane_loop::metrics_prefix::<RightToLeftMessages>(&lane),
 					),

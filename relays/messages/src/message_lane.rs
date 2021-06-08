@@ -19,6 +19,7 @@
 //! 1) relay new messages from source to target node;
 //! 2) relay proof-of-delivery from target to source node.
 
+use num_traits::{Saturating, Zero};
 use relay_utils::{BlockNumberBase, HeaderId};
 use std::fmt::Debug;
 
@@ -29,6 +30,8 @@ pub trait MessageLane: 'static + Clone + Send + Sync {
 	/// Name of the messages target.
 	const TARGET_NAME: &'static str;
 
+	/// Type of the message fee, paid by the message submitter at the source chain.
+	type OutboundMessageFee: Clone + Copy + Debug + PartialOrd + Saturating + Zero + Send + Sync;
 	/// Messages proof.
 	type MessagesProof: Clone + Debug + Send + Sync;
 	/// Messages receiving proof.

@@ -17,14 +17,15 @@
 use bp_runtime::Chain as ChainBase;
 use frame_support::Parameter;
 use jsonrpsee_ws_client::{DeserializeOwned, Serialize};
-use num_traits::{CheckedSub, Zero};
+use num_traits::{Bounded, CheckedSub, Saturating, Zero};
+use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_core::{storage::StorageKey, Pair};
 use sp_runtime::{
 	generic::SignedBlock,
 	traits::{
 		AtLeast32Bit, Block as BlockT, Dispatchable, MaybeDisplay, MaybeSerialize, MaybeSerializeDeserialize, Member,
 	},
-	EncodedJustification,
+	EncodedJustification, FixedPointOperand,
 };
 use std::{fmt::Debug, time::Duration};
 
@@ -37,6 +38,10 @@ pub trait Chain: ChainBase + Clone {
 	/// How often blocks are produced on that chain. It's suggested to set this value
 	/// to match the block time of the chain.
 	const AVERAGE_BLOCK_INTERVAL: Duration;
+	/// Maximal expected storage proof overhead (in bytes).
+	const STORAGE_PROOF_OVERHEAD: u32;
+	/// Maximal size (in bytes) of SCALE-encoded account id on this chain.
+	const MAXIMAL_ENCODED_ACCOUNT_ID_SIZE: u32;
 
 	/// The user account identifier type for the runtime.
 	type AccountId: Parameter + Member + MaybeSerializeDeserialize + Debug + MaybeDisplay + Ord + Default;
@@ -54,14 +59,25 @@ pub trait Chain: ChainBase + Clone {
 	type SignedBlock: Member + Serialize + DeserializeOwned + BlockWithJustification<Self::Header>;
 	/// The aggregated `Call` type.
 	type Call: Dispatchable + Debug;
+	/// Balance of an account in native tokens.
+	type Balance: AtLeast32BitUnsigned
+		+ FixedPointOperand
+		+ Parameter
+		+ Member
+		+ DeserializeOwned
+		+ Clone
+		+ Copy
+		+ Bounded
+		+ CheckedSub
+		+ Saturating
+		+ PartialOrd
+		+ Zero
+		+ std::convert::TryFrom<sp_core::U256>;
 }
 
 /// Substrate-based chain with `frame_system::Config::AccountData` set to
-/// the `pallet_balances::AccountData<NativeBalance>`.
+/// the `pallet_balances::AccountData<Balance>`.
 pub trait ChainWithBalances: Chain {
-	/// Balance of an account in native tokens.
-	type NativeBalance: Parameter + Member + DeserializeOwned + Clone + Copy + CheckedSub + PartialOrd + Zero;
-
 	/// Return runtime storage key for getting `frame_system::AccountInfo` of given account.
 	fn account_info_storage_key(account_id: &Self::AccountId) -> StorageKey;
 }

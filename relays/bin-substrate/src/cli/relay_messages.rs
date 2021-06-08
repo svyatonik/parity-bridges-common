@@ -22,7 +22,7 @@ use crate::cli::{
 use crate::messages_lane::MessagesRelayParams;
 use crate::select_full_bridge;
 
-use structopt::StructOpt;
+use structopt::{clap::arg_enum, StructOpt};
 
 /// Start messages relayer process.
 #[derive(StructOpt)]
@@ -33,6 +33,9 @@ pub struct RelayMessages {
 	/// Hex-encoded lane id that should be served by the relay. Defaults to `00000000`.
 	#[structopt(long, default_value = "00000000")]
 	lane: HexLaneId,
+	/// Relayer operating mode.
+	#[structopt(possible_values = &RelayerMode::variants(), case_insensitive = true, default_value="NoLosses")]
+	relayer_mode: RelayerMode,
 	#[structopt(flatten)]
 	source: SourceConnectionParams,
 	#[structopt(flatten)]
@@ -43,6 +46,26 @@ pub struct RelayMessages {
 	target_sign: TargetSigningParams,
 	#[structopt(flatten)]
 	prometheus_params: PrometheusParams,
+}
+
+arg_enum! {
+	/// Relayer operating mode.
+	#[derive(StructOpt)]
+	pub enum RelayerMode {
+		Altruistic,
+		NoLosses,
+		MaximalReward,
+	}
+}
+
+impl From<RelayerMode> for messages_relay::message_lane_loop::RelayerMode {
+	fn from(mode: RelayerMode) -> Self {
+		match mode {
+			RelayerMode::Altruistic => Self::Altruistic,
+			RelayerMode::NoLosses => Self::NoLosses,
+			RelayerMode::MaximalReward => Self::MaximalReward,
+		}
+	}
 }
 
 impl RelayMessages {
@@ -62,6 +85,7 @@ impl RelayMessages {
 				source_to_target_headers_relay: None,
 				target_to_source_headers_relay: None,
 				lane_id: self.lane.into(),
+				relayer_mode: self.relayer_mode.into(),
 				metrics_params: self.prometheus_params.into(),
 			})
 			.await

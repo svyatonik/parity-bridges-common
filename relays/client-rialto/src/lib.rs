@@ -39,16 +39,17 @@ impl ChainBase for Rialto {
 impl Chain for Rialto {
 	const NAME: &'static str = "Rialto";
 	const AVERAGE_BLOCK_INTERVAL: Duration = Duration::from_secs(5);
+	const STORAGE_PROOF_OVERHEAD: u32 = bp_rialto::EXTRA_STORAGE_PROOF_SIZE;
+	const MAXIMAL_ENCODED_ACCOUNT_ID_SIZE: u32 = bp_rialto::MAXIMAL_ENCODED_ACCOUNT_ID_SIZE;
 
 	type AccountId = rialto_runtime::AccountId;
 	type Index = rialto_runtime::Index;
 	type SignedBlock = rialto_runtime::SignedBlock;
 	type Call = rialto_runtime::Call;
+	type Balance = rialto_runtime::Balance;
 }
 
 impl ChainWithBalances for Rialto {
-	type NativeBalance = rialto_runtime::Balance;
-
 	fn account_info_storage_key(account_id: &Self::AccountId) -> StorageKey {
 		use frame_support::storage::generator::StorageMap;
 		StorageKey(frame_system::Account::<rialto_runtime::Runtime>::storage_map_final_key(

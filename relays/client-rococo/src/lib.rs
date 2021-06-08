@@ -42,16 +42,17 @@ impl ChainBase for Rococo {
 impl Chain for Rococo {
 	const NAME: &'static str = "Rococo";
 	const AVERAGE_BLOCK_INTERVAL: Duration = Duration::from_secs(6);
+	const STORAGE_PROOF_OVERHEAD: u32 = bp_rococo::EXTRA_STORAGE_PROOF_SIZE;
+	const MAXIMAL_ENCODED_ACCOUNT_ID_SIZE: u32 = bp_rococo::MAXIMAL_ENCODED_ACCOUNT_ID_SIZE;
 
 	type AccountId = bp_rococo::AccountId;
 	type Index = bp_rococo::Index;
 	type SignedBlock = bp_rococo::SignedBlock;
 	type Call = bp_rococo::Call;
+	type Balance = bp_rococo::Balance;
 }
 
 impl ChainWithBalances for Rococo {
-	type NativeBalance = bp_rococo::Balance;
-
 	fn account_info_storage_key(account_id: &Self::AccountId) -> StorageKey {
 		StorageKey(bp_rococo::account_info_storage_key(account_id))
 	}

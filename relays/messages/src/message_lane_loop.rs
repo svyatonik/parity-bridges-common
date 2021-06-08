@@ -58,8 +58,19 @@ pub struct Params {
 	pub delivery_params: MessageDeliveryParams,
 }
 
+/// Relayer operating mode.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RelayerMode {
+	/// The relayer doesn't care about rewards.
+	Altruistic,
+	/// The relayer will deliver all messages and confirmations as long as he's not losing any funds.
+	NoLosses,
+	/// The relayer will only deliver messages and confirmations if he's getting enough reward.
+	MaximalReward,
+}
+
 /// Message delivery race parameters.
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct MessageDeliveryParams {
 	/// Maximal number of unconfirmed relayer entries at the inbound lane. If there's that number of entries
 	/// in the `InboundLaneData::relayers` set, all new messages will be rejected until reward payment will
@@ -74,20 +85,24 @@ pub struct MessageDeliveryParams {
 	/// Maximal cumulative dispatch weight of relayed messages in single delivery transaction.
 	pub max_messages_weight_in_single_batch: Weight,
 	/// Maximal cumulative size of relayed messages in single delivery transaction.
-	pub max_messages_size_in_single_batch: usize,
+	pub max_messages_size_in_single_batch: u32,
+	/// TODO
+	pub relayer_mode: RelayerMode,
 }
 
-/// Message weights.
+/// Message details.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MessageWeights {
+pub struct MessageDetails<OutboundMessageFee> {
 	/// Message dispatch weight.
-	pub weight: Weight,
+	pub dispatch_weight: Weight,
 	/// Message size (number of bytes in encoded payload).
-	pub size: usize,
+	pub size: u32,
+	/// The relayer reward paid in the source chain tokens.
+	pub reward: OutboundMessageFee,
 }
 
-/// Messages weights map.
-pub type MessageWeightsMap = BTreeMap<MessageNonce, MessageWeights>;
+/// Messages details map.
+pub type MessageDetailsMap<OutboundMessageFee> = BTreeMap<MessageNonce, MessageDetails<OutboundMessageFee>>;
 
 /// Message delivery race proof parameters.
 #[derive(Debug, PartialEq)]
@@ -117,13 +132,13 @@ pub trait SourceClient<P: MessageLane>: RelayClient {
 
 	/// Returns mapping of message nonces, generated on this client, to their weights.
 	///
-	/// Some weights may be missing from returned map, if corresponding messages were pruned at
+	/// Some messages may be missing from returned map, if corresponding messages were pruned at
 	/// the source chain.
-	async fn generated_messages_weights(
+	async fn generated_message_details(
 		&self,
 		id: SourceHeaderIdOf<P>,
 		nonces: RangeInclusive<MessageNonce>,
-	) -> Result<MessageWeightsMap, Self::Error>;
+	) -> Result<MessageDetailsMap<P::OutboundMessageFee>, Self::Error>;
 
 	/// Prove messages in inclusive range [begin; end].
 	async fn prove_messages(
@@ -142,6 +157,9 @@ pub trait SourceClient<P: MessageLane>: RelayClient {
 
 	/// We need given finalized target header on source to continue synchronization.
 	async fn require_target_header_on_source(&self, id: TargetHeaderIdOf<P>);
+
+	/// TODO
+	async fn estimate_confirmation_transaction(&self) -> P::OutboundMessageFee;
 }
 
 /// Target client trait.
@@ -183,6 +201,14 @@ pub trait TargetClient<P: MessageLane>: RelayClient {
 
 	/// We need given finalized source header on target to continue synchronization.
 	async fn require_source_header_on_target(&self, id: SourceHeaderIdOf<P>);
+
+	/// TODO
+	async fn estimate_delivery_transaction_in_source_tokens(
+		&self,
+		nonces: RangeInclusive<MessageNonce>,
+		total_dispatch_weight: Weight,
+		total_size: u32,
+	) -> P::OutboundMessageFee;
 }
 
 /// State of the client.
@@ -426,6 +452,8 @@ pub(crate) mod tests {
 		HeaderId(number, number)
 	}
 
+	pub type TestOutboundMessageFee = u64;
+
 	pub type TestSourceHeaderId = HeaderId<TestSourceHeaderNumber, TestSourceHeaderHash>;
 	pub type TestTargetHeaderId = HeaderId<TestTargetHeaderNumber, TestTargetHeaderHash>;
 
@@ -457,6 +485,7 @@ pub(crate) mod tests {
 		type MessagesProof = TestMessagesProof;
 		type MessagesReceivingProof = TestMessagesReceivingProof;
 
+		type OutboundMessageFee = u64;
 		type SourceHeaderNumber = TestSourceHeaderNumber;
 		type SourceHeaderHash = TestSourceHeaderHash;
 
@@ -488,6 +517,15 @@ pub(crate) mod tests {
 	pub struct TestSourceClient {
 		data: Arc<Mutex<TestClientData>>,
 		tick: Arc<dyn Fn(&mut TestClientData) + Send + Sync>,
+	}
+
+	impl Default for TestSourceClient {
+		fn default() -> Self {
+			TestSourceClient {
+				data: Arc::new(Mutex::new(TestClientData::default())),
+				tick: Arc::new(|_| {}),
+			}
+		}
 	}
 
 	#[async_trait]
@@ -536,13 +574,22 @@ pub(crate) mod tests {
 			Ok((id, data.source_latest_confirmed_received_nonce))
 		}
 
-		async fn generated_messages_weights(
+		async fn generated_message_details(
 			&self,
 			_id: SourceHeaderIdOf<TestMessageLane>,
 			nonces: RangeInclusive<MessageNonce>,
-		) -> Result<MessageWeightsMap, TestError> {
+		) -> Result<MessageDetailsMap<TestOutboundMessageFee>, TestError> {
 			Ok(nonces
-				.map(|nonce| (nonce, MessageWeights { weight: 1, size: 1 }))
+				.map(|nonce| {
+					(
+						nonce,
+						MessageDetails {
+							dispatch_weight: 1,
+							size: 1,
+							reward: 1,
+						},
+					)
+				})
 				.collect())
 		}
 
@@ -596,12 +643,25 @@ pub(crate) mod tests {
 			data.target_to_source_header_requirements.push(id);
 			(self.tick)(&mut *data);
 		}
+
+		async fn estimate_confirmation_transaction(&self) -> TestOutboundMessageFee {
+			unimplemented!("TODO")
+		}
 	}
 
 	#[derive(Clone)]
 	pub struct TestTargetClient {
 		data: Arc<Mutex<TestClientData>>,
 		tick: Arc<dyn Fn(&mut TestClientData) + Send + Sync>,
+	}
+
+	impl Default for TestTargetClient {
+		fn default() -> Self {
+			TestTargetClient {
+				data: Arc::new(Mutex::new(TestClientData::default())),
+				tick: Arc::new(|_| {}),
+			}
+		}
 	}
 
 	#[async_trait]
@@ -702,6 +762,15 @@ pub(crate) mod tests {
 			data.source_to_target_header_requirements.push(id);
 			(self.tick)(&mut *data);
 		}
+
+		async fn estimate_delivery_transaction_in_source_tokens(
+			&self,
+			_nonces: RangeInclusive<MessageNonce>,
+			_total_dispatch_weight: Weight,
+			_total_size: u32,
+		) -> TestOutboundMessageFee {
+			unimplemented!("TODO")
+		}
 	}
 
 	fn run_loop_test(
@@ -734,6 +803,7 @@ pub(crate) mod tests {
 						max_messages_in_single_batch: 4,
 						max_messages_weight_in_single_batch: 4,
 						max_messages_size_in_single_batch: 4,
+						relayer_mode: RelayerMode::Altruistic,
 					},
 				},
 				source_client,

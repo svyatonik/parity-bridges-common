@@ -42,8 +42,7 @@ pub type RialtoMessagesToMillau =
 	SubstrateMessageLaneToSubstrate<Rialto, RialtoSigningParams, Millau, MillauSigningParams>;
 
 impl SubstrateMessageLane for RialtoMessagesToMillau {
-	const OUTBOUND_LANE_MESSAGES_DISPATCH_WEIGHT_METHOD: &'static str =
-		bp_millau::TO_MILLAU_MESSAGES_DISPATCH_WEIGHT_METHOD;
+	const OUTBOUND_LANE_MESSAGE_DETAILS_METHOD: &'static str = bp_millau::TO_MILLAU_MESSAGE_DETAILS_METHOD;
 	const OUTBOUND_LANE_LATEST_GENERATED_NONCE_METHOD: &'static str =
 		bp_millau::TO_MILLAU_LATEST_GENERATED_NONCE_METHOD;
 	const OUTBOUND_LANE_LATEST_RECEIVED_NONCE_METHOD: &'static str = bp_millau::TO_MILLAU_LATEST_RECEIVED_NONCE_METHOD;
@@ -129,6 +128,7 @@ impl SubstrateMessageLane for RialtoMessagesToMillau {
 /// Rialto node as messages source.
 type RialtoSourceClient = SubstrateMessagesSource<
 	Rialto,
+	Millau,
 	RialtoMessagesToMillau,
 	rialto_runtime::Runtime,
 	rialto_runtime::WithMillauMessagesInstance,
@@ -136,6 +136,7 @@ type RialtoSourceClient = SubstrateMessagesSource<
 
 /// Millau node as messages target.
 type MillauTargetClient = SubstrateMessagesTarget<
+	Rialto,
 	Millau,
 	RialtoMessagesToMillau,
 	millau_runtime::Runtime,
@@ -160,7 +161,7 @@ pub async fn run(
 	};
 
 	// 2/3 is reserved for proofs and tx overhead
-	let max_messages_size_in_single_batch = bp_millau::max_extrinsic_size() as usize / 3;
+	let max_messages_size_in_single_batch = bp_millau::max_extrinsic_size() / 3;
 	let (max_messages_in_single_batch, max_messages_weight_in_single_batch) =
 		select_delivery_transaction_limits::<pallet_bridge_messages::weights::RialtoWeight<rialto_runtime::Runtime>>(
 			bp_millau::max_extrinsic_weight(),
@@ -193,6 +194,7 @@ pub async fn run(
 				max_messages_in_single_batch,
 				max_messages_weight_in_single_batch,
 				max_messages_size_in_single_batch,
+				relayer_mode: params.relayer_mode,
 			},
 		},
 		RialtoSourceClient::new(
