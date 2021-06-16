@@ -405,7 +405,6 @@ mod tests {
 				dispatch_weight: 0,
 				size: 0,
 				delivery_and_dispatch_fee: 0,
-				dispatch_fee_payment: false,
 			})
 			.collect()
 	}
@@ -413,7 +412,7 @@ mod tests {
 	#[test]
 	fn make_message_details_map_succeeds_if_no_messages_are_missing() {
 		assert_eq!(
-			make_message_details_map::<relay_rialto_client::Rialto>(message_details_from_rpc(1..=3), 1..=3).unwrap(),
+			make_message_details_map::<relay_rialto_client::Rialto>(message_details_from_rpc(1..=3), 1..=3,).unwrap(),
 			vec![
 				(
 					1,
@@ -448,7 +447,7 @@ mod tests {
 	#[test]
 	fn make_message_details_map_succeeds_if_head_messages_are_missing() {
 		assert_eq!(
-			make_message_details_map::<relay_rialto_client::Rialto>(message_details_from_rpc(2..=3), 1..=3).unwrap(),
+			make_message_details_map::<relay_rialto_client::Rialto>(message_details_from_rpc(2..=3), 1..=3,).unwrap(),
 			vec![
 				(
 					2,
@@ -477,7 +476,7 @@ mod tests {
 		let mut message_details_from_rpc = message_details_from_rpc(1..=3);
 		message_details_from_rpc.remove(1);
 		assert!(matches!(
-			make_message_details_map::<relay_rialto_client::Rialto>(message_details_from_rpc, 1..=3),
+			make_message_details_map::<relay_rialto_client::Rialto>(message_details_from_rpc, 1..=3,),
 			Err(SubstrateError::Custom(_))
 		));
 	}
@@ -485,7 +484,7 @@ mod tests {
 	#[test]
 	fn make_message_details_map_fails_if_tail_messages_are_missing() {
 		assert!(matches!(
-			make_message_details_map::<relay_rialto_client::Rialto>(message_details_from_rpc(1..=2), 1..=3),
+			make_message_details_map::<relay_rialto_client::Rialto>(message_details_from_rpc(1..=2), 1..=3,),
 			Err(SubstrateError::Custom(_))
 		));
 	}

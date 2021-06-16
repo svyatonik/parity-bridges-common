@@ -767,7 +767,7 @@ impl_runtime_apis! {
 					dispatch_weight: decoded_payload.weight,
 					size: message_data.payload.len() as _,
 					delivery_and_dispatch_fee: message_data.fee,
-					dispatch_fee_payment: false, // TODO
+					// TODO: include dispatch fee type (https://github.com/paritytech/parity-bridges-common/pull/911)
 				})
 			})
 			.collect()

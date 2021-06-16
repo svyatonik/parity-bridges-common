@@ -80,7 +80,7 @@ impl SendMessage {
 			let target_sign = target_sign.to_keypair::<Target>()?;
 
 			encode_call::preprocess_call::<Source, Target>(message, bridge.bridge_instance_index());
-			let target_call = Target::encode_call(&message)?;
+			let target_call = Target::encode_call(message)?;
 
 			let payload = {
 				let target_call_weight = prepare_call_dispatch_weight(
@@ -127,18 +127,18 @@ impl SendMessage {
 			let source_sign = self.source_sign.to_keypair::<Source>()?;
 
 			let lane = self.lane.clone().into();
-			let fee =
-				match self.fee {
-					Some(fee) => fee,
-					None => Balance(
-						estimate_message_delivery_and_dispatch_fee::<
-							<Source as relay_substrate_client::Chain>::Balance,
-							_,
-							_,
-						>(&source_client, ESTIMATE_MESSAGE_FEE_METHOD, lane, payload.clone())
-						.await? as _,
-					),
-				};
+			let fee = match self.fee {
+				Some(fee) => fee,
+				None => Balance(
+					estimate_message_delivery_and_dispatch_fee::<<Source as Chain>::Balance, _, _>(
+						&source_client,
+						ESTIMATE_MESSAGE_FEE_METHOD,
+						lane,
+						payload.clone(),
+					)
+					.await? as _,
+				),
+			};
 			let dispatch_weight = payload.weight;
 			let send_message_call = Source::encode_call(&encode_call::Call::BridgeSendMessage {
 				bridge_instance_index: self.bridge.bridge_instance_index(),

@@ -174,8 +174,6 @@ pub struct MessageDetails<OutboundMessageFee> {
 	pub size: u32,
 	/// Delivery+dispatch fee paid by the message submitter at the source chain.
 	pub delivery_and_dispatch_fee: OutboundMessageFee,
-	/// TODO: replace me with `DispatchFeePayment` from #911.
-	pub dispatch_fee_payment: bool,
 }
 
 /// Gist of `InboundLaneData::relayers` field used by runtime APIs.

@@ -52,7 +52,7 @@ impl EstimateFee {
 			let lane = lane.into();
 			let payload = Source::encode_message(payload).map_err(|e| anyhow::format_err!("{:?}", e))?;
 
-			let fee: <Source as relay_substrate_client::Chain>::Balance =
+			let fee: <Source as Chain>::Balance =
 				estimate_message_delivery_and_dispatch_fee(&source_client, ESTIMATE_MESSAGE_FEE_METHOD, lane, payload)
 					.await?;
 
