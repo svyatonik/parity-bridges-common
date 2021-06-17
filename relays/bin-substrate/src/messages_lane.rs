@@ -138,10 +138,10 @@ where
 	const SOURCE_NAME: &'static str = Source::NAME;
 	const TARGET_NAME: &'static str = Target::NAME;
 
-	type OutboundMessageFee = Source::Balance;
 	type MessagesProof = SubstrateMessagesProof<Source>;
 	type MessagesReceivingProof = SubstrateMessagesReceivingProof<Target>;
 
+	type SourceChainBalance = Source::Balance;
 	type SourceHeaderNumber = BlockNumberOf<Source>;
 	type SourceHeaderHash = HashOf<Source>;
 

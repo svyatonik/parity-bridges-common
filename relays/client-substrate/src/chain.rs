@@ -17,7 +17,7 @@
 use bp_runtime::Chain as ChainBase;
 use frame_support::Parameter;
 use jsonrpsee_ws_client::{DeserializeOwned, Serialize};
-use num_traits::{Bounded, CheckedSub, Saturating, Zero};
+use num_traits::{Bounded, CheckedSub, SaturatingAdd, Zero};
 use sp_arithmetic::traits::AtLeast32BitUnsigned;
 use sp_core::{storage::StorageKey, Pair};
 use sp_runtime::{
@@ -69,7 +69,7 @@ pub trait Chain: ChainBase + Clone {
 		+ Copy
 		+ Bounded
 		+ CheckedSub
-		+ Saturating
+		+ SaturatingAdd
 		+ PartialOrd
 		+ Zero
 		+ std::convert::TryFrom<sp_core::U256>;

@@ -114,7 +114,7 @@ where
 #[async_trait]
 impl<SC, TC, P, R, I> TargetClient<P> for SubstrateMessagesTarget<SC, TC, P, R, I>
 where
-	SC: Chain<Hash = P::SourceHeaderHash, BlockNumber = P::SourceHeaderNumber, Balance = P::OutboundMessageFee>,
+	SC: Chain<Hash = P::SourceHeaderHash, BlockNumber = P::SourceHeaderNumber, Balance = P::SourceChainBalance>,
 	SC::Balance: TryFrom<TC::Balance> + Bounded,
 	TC: Chain<Hash = P::TargetHeaderHash, BlockNumber = P::TargetHeaderNumber>,
 	TC::Hash: Copy,
@@ -246,7 +246,7 @@ where
 		nonces: RangeInclusive<MessageNonce>,
 		total_dispatch_weight: Weight,
 		total_size: u32,
-	) -> P::OutboundMessageFee {
+	) -> P::SourceChainBalance {
 		// we don't care about proof actually being the proof, because its validity doesn't
 		// affect the call weight - we only care about its size
 		let proof_size = SC::STORAGE_PROOF_OVERHEAD.saturating_add(total_size);

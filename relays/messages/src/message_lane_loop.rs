@@ -65,8 +65,6 @@ pub enum RelayerMode {
 	Altruistic,
 	/// The relayer will deliver all messages and confirmations as long as he's not losing any funds.
 	NoLosses,
-	/// The relayer will only deliver messages and confirmations if he's getting enough reward.
-	MaximalReward,
 }
 
 /// Message delivery race parameters.
@@ -86,23 +84,23 @@ pub struct MessageDeliveryParams {
 	pub max_messages_weight_in_single_batch: Weight,
 	/// Maximal cumulative size of relayed messages in single delivery transaction.
 	pub max_messages_size_in_single_batch: u32,
-	/// TODO
+	/// Relayer operating mode.
 	pub relayer_mode: RelayerMode,
 }
 
 /// Message details.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct MessageDetails<OutboundMessageFee> {
+pub struct MessageDetails<SourceChainBalance> {
 	/// Message dispatch weight.
 	pub dispatch_weight: Weight,
 	/// Message size (number of bytes in encoded payload).
 	pub size: u32,
 	/// The relayer reward paid in the source chain tokens.
-	pub reward: OutboundMessageFee,
+	pub reward: SourceChainBalance,
 }
 
 /// Messages details map.
-pub type MessageDetailsMap<OutboundMessageFee> = BTreeMap<MessageNonce, MessageDetails<OutboundMessageFee>>;
+pub type MessageDetailsMap<SourceChainBalance> = BTreeMap<MessageNonce, MessageDetails<SourceChainBalance>>;
 
 /// Message delivery race proof parameters.
 #[derive(Debug, PartialEq)]
@@ -138,7 +136,7 @@ pub trait SourceClient<P: MessageLane>: RelayClient {
 		&self,
 		id: SourceHeaderIdOf<P>,
 		nonces: RangeInclusive<MessageNonce>,
-	) -> Result<MessageDetailsMap<P::OutboundMessageFee>, Self::Error>;
+	) -> Result<MessageDetailsMap<P::SourceChainBalance>, Self::Error>;
 
 	/// Prove messages in inclusive range [begin; end].
 	async fn prove_messages(
@@ -158,8 +156,8 @@ pub trait SourceClient<P: MessageLane>: RelayClient {
 	/// We need given finalized target header on source to continue synchronization.
 	async fn require_target_header_on_source(&self, id: TargetHeaderIdOf<P>);
 
-	/// TODO
-	async fn estimate_confirmation_transaction(&self) -> P::OutboundMessageFee;
+	/// Estimate cost of single message confirmation transaction in source chain tokens.
+	async fn estimate_confirmation_transaction(&self) -> P::SourceChainBalance;
 }
 
 /// Target client trait.
@@ -202,13 +200,16 @@ pub trait TargetClient<P: MessageLane>: RelayClient {
 	/// We need given finalized source header on target to continue synchronization.
 	async fn require_source_header_on_target(&self, id: SourceHeaderIdOf<P>);
 
-	/// TODO
+	/// Estimate cost of messages delivery transaction in source chain tokens.
+	///
+	/// Please keep in mind that the returned cost must be converted to the source chain
+	/// tokens, even though the transaction fee will be paid in the target chain tokens.
 	async fn estimate_delivery_transaction_in_source_tokens(
 		&self,
 		nonces: RangeInclusive<MessageNonce>,
 		total_dispatch_weight: Weight,
 		total_size: u32,
-	) -> P::OutboundMessageFee;
+	) -> P::SourceChainBalance;
 }
 
 /// State of the client.
@@ -452,8 +453,10 @@ pub(crate) mod tests {
 		HeaderId(number, number)
 	}
 
-	pub type TestOutboundMessageFee = u64;
+	pub const CONFIRMATION_TRANSACTION_COST: TestSourceChainBalance = 1;
+	pub const DELIVERY_TRANSACTION_COST: TestSourceChainBalance = 1;
 
+	pub type TestSourceChainBalance = u64;
 	pub type TestSourceHeaderId = HeaderId<TestSourceHeaderNumber, TestSourceHeaderHash>;
 	pub type TestTargetHeaderId = HeaderId<TestTargetHeaderNumber, TestTargetHeaderHash>;
 
@@ -485,7 +488,7 @@ pub(crate) mod tests {
 		type MessagesProof = TestMessagesProof;
 		type MessagesReceivingProof = TestMessagesReceivingProof;
 
-		type OutboundMessageFee = u64;
+		type SourceChainBalance = TestSourceChainBalance;
 		type SourceHeaderNumber = TestSourceHeaderNumber;
 		type SourceHeaderHash = TestSourceHeaderHash;
 
@@ -578,7 +581,7 @@ pub(crate) mod tests {
 			&self,
 			_id: SourceHeaderIdOf<TestMessageLane>,
 			nonces: RangeInclusive<MessageNonce>,
-		) -> Result<MessageDetailsMap<TestOutboundMessageFee>, TestError> {
+		) -> Result<MessageDetailsMap<TestSourceChainBalance>, TestError> {
 			Ok(nonces
 				.map(|nonce| {
 					(
@@ -644,8 +647,8 @@ pub(crate) mod tests {
 			(self.tick)(&mut *data);
 		}
 
-		async fn estimate_confirmation_transaction(&self) -> TestOutboundMessageFee {
-			unimplemented!("TODO")
+		async fn estimate_confirmation_transaction(&self) -> TestSourceChainBalance {
+			CONFIRMATION_TRANSACTION_COST
 		}
 	}
 
@@ -767,9 +770,9 @@ pub(crate) mod tests {
 			&self,
 			_nonces: RangeInclusive<MessageNonce>,
 			_total_dispatch_weight: Weight,
-			_total_size: u32,
-		) -> TestOutboundMessageFee {
-			unimplemented!("TODO")
+			total_size: u32,
+		) -> TestSourceChainBalance {
+			DELIVERY_TRANSACTION_COST * (total_size as TestSourceChainBalance)
 		}
 	}
 

@@ -54,7 +54,6 @@ arg_enum! {
 	pub enum RelayerMode {
 		Altruistic,
 		NoLosses,
-		MaximalReward,
 	}
 }
 
@@ -63,7 +62,6 @@ impl From<RelayerMode> for messages_relay::message_lane_loop::RelayerMode {
 		match mode {
 			RelayerMode::Altruistic => Self::Altruistic,
 			RelayerMode::NoLosses => Self::NoLosses,
-			RelayerMode::MaximalReward => Self::MaximalReward,
 		}
 	}
 }

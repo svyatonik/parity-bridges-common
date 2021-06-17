@@ -111,7 +111,7 @@ where
 #[async_trait]
 impl<SC, TC, P, R, I> SourceClient<P> for SubstrateMessagesSource<SC, TC, P, R, I>
 where
-	SC: Chain<Hash = P::SourceHeaderHash, BlockNumber = P::SourceHeaderNumber, Balance = P::OutboundMessageFee>,
+	SC: Chain<Hash = P::SourceHeaderHash, BlockNumber = P::SourceHeaderNumber, Balance = P::SourceChainBalance>,
 	SC::Hash: Copy,
 	SC::BlockNumber: Copy,
 	SC::Balance: Decode + Bounded,
@@ -180,7 +180,7 @@ where
 		&self,
 		id: SourceHeaderIdOf<P>,
 		nonces: RangeInclusive<MessageNonce>,
-	) -> Result<MessageDetailsMap<P::OutboundMessageFee>, SubstrateError> {
+	) -> Result<MessageDetailsMap<P::SourceChainBalance>, SubstrateError> {
 		let encoded_response = self
 			.client
 			.state_call(
@@ -251,7 +251,7 @@ where
 		}
 	}
 
-	async fn estimate_confirmation_transaction(&self) -> P::OutboundMessageFee {
+	async fn estimate_confirmation_transaction(&self) -> P::SourceChainBalance {
 		// we don't care about proof actually being the proof, because its validity doesn't
 		// affect the call weight - we only care about its size
 		let single_message_confirmation_size =

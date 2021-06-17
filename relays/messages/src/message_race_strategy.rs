@@ -88,7 +88,7 @@ where
 			HeaderId<TargetHeaderHash, TargetHeaderNumber>,
 			Proof,
 		>,
-		mut selector: impl FnMut(SourceNoncesRange) -> F,
+		selector: impl Fn(SourceNoncesRange) -> F,
 	) -> Option<RangeInclusive<MessageNonce>> {
 		// if we do not know best nonce at target node, we can't select anything
 		let target_nonce = self.best_target_nonce?;
